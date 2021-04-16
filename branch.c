@@ -89,7 +89,7 @@ lli dvd(lli x, lli y) {
 }
 lli mod(lli x, lli y) {
   if (y == 0) return 0;
-  return x % y;
+  return (x % y + y) % y;
 }
 lli lt(lli x, lli y) {
   return x < y ? 1 : 0;
