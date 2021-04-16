@@ -1,3 +1,9 @@
+/*
+
+gcc branch.c -o branch && ./branch <code> [argument 1] [argument 2] ...
+
+*/
+
 #include "stdio.h"
 #include "stdlib.h"
 #include "stdbool.h"
@@ -100,7 +106,8 @@ lli or(lli x, lli y) {
 
 int main(int argc, char** argv) {
   if (argc < 2) {
-    puts("You have not entered any code! The code should go in the first command line argument.");
+    puts("You have not entered any code! The code "
+      "should go in the first command line argument.");
     return -1;
   }
 
@@ -288,8 +295,19 @@ int main(int argc, char** argv) {
         pointer->right->value = t;
         pointer = pointer->right;
       }
+    } else if (code[index] == '{') {
+      create_parent(left);
+      create(right);
+      lli temp = pointer->parent->value;
+      pointer->parent->value = pointer->right->value;
+      pointer->right->value = temp;
+    } else if (code[index] == '}') {
+      create_parent(right);
+      create(left);
+      lli temp = pointer->parent->value;
+      pointer->parent->value = pointer->left->value;
+      pointer->left->value = temp;
     }
     index++;
   }
-  prettyprint(pointer);
 }
