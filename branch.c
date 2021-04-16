@@ -57,7 +57,7 @@ struct Node* make_node(struct Node* parent, lli value) {
 void _prettyprint(struct Node* root, struct Node* node, int indent) {
   if (root == NULL) {
     for (int i = 0; i < indent; i++) printf("|-- ");
-    puts("nil");
+    puts("(null)");
     return;
   }
   if (root->left != NULL || root->right != NULL) _prettyprint(root->left, node, indent + 1);
@@ -307,6 +307,22 @@ int main(int argc, char** argv) {
       lli temp = pointer->parent->value;
       pointer->parent->value = pointer->left->value;
       pointer->left->value = temp;
+    } else if (code[index] == '\"') {
+      struct Node* collector = make_node(pointer, 0);
+      collector->left = pointer->left;
+      collector->right = pointer->right;
+      pointer->left = NULL;
+      pointer->right = collector;
+      savepreg collector;
+    } else if (code[index] == '\'') {
+      struct Node* collector = make_node(pointer, 0);
+      collector->left = pointer->left;
+      collector->right = pointer->right;
+      pointer->right = NULL;
+      pointer->left = collector;
+      savepreg collector;
+    } else if (code[index] == '`') {
+      prettyprint(pointer);
     }
     index++;
   }
