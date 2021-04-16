@@ -11,6 +11,7 @@
 #define create_parent(side)          \
   if (pointer->parent == NULL) {     \
     create(parent);                  \
+    pointer->parent->parent = NULL;  \
     pointer->parent->side = pointer; \
   }
 #define binop(fn)                                   \
@@ -243,30 +244,50 @@ int main(int argc, char** argv) {
       }
     } else if (code[index] == '(') {
       create_parent(right);
-      struct Node* a = pointer->parent->left;
-      struct Node* b = pointer->left;
-      struct Node* c = pointer->right;
-      lli tempval = pointer->parent->value;
-      pointer->parent->value = pointer->value;
-      pointer = pointer->parent;
-      pointer->left = pointer->right;
-      pointer->left->value = tempval;
-      pointer->left->left = a;
-      pointer->left->right = b;
-      pointer->right = c;
+      if (pointer == pointer->parent->right) {
+        struct Node* a = pointer->parent->left;
+        struct Node* b = pointer->left;
+        struct Node* c = pointer->right;
+        lli tempval = pointer->parent->value;
+        pointer->parent->value = pointer->value;
+        pointer = pointer->parent;
+        pointer->left = pointer->right;
+        pointer->left->value = tempval;
+        pointer->left->left = a;
+        pointer->left->right = b;
+        pointer->right = c;
+      } else {
+        create(right);
+        create(left);
+        int t = pointer->value;
+        pointer->value = pointer->right->value;
+        pointer->right->value = pointer->left->value;
+        pointer->left->value = t;
+        pointer = pointer->left;
+      }
     } else if (code[index] == ')') {
       create_parent(left);
-      struct Node* a = pointer->left;
-      struct Node* b = pointer->right;
-      struct Node* c = pointer->parent->right;
-      lli tempval = pointer->parent->value;
-      pointer->parent->value = pointer->value;
-      pointer = pointer->parent;
-      pointer->right = pointer->left;
-      pointer->left->value = tempval;
-      pointer->right->left = b;
-      pointer->right->right = c;
-      pointer->left = a;
+      if (pointer == pointer->parent->left) {
+        struct Node* a = pointer->left;
+        struct Node* b = pointer->right;
+        struct Node* c = pointer->parent->right;
+        lli tempval = pointer->parent->value;
+        pointer->parent->value = pointer->value;
+        pointer = pointer->parent;
+        pointer->right = pointer->left;
+        pointer->left->value = tempval;
+        pointer->right->left = b;
+        pointer->right->right = c;
+        pointer->left = a;
+      } else {
+        create(left);
+        create(right);
+        int t = pointer->value;
+        pointer->value = pointer->left->value;
+        pointer->left->value = pointer->right->value;
+        pointer->right->value = t;
+        pointer = pointer->right;
+      }
     }
     index++;
   }
