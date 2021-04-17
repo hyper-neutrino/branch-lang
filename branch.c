@@ -103,6 +103,12 @@ lli and(lli x, lli y) {
 lli or(lli x, lli y) {
   return x | y;
 }
+lli expt(lli x, lli y) {
+  if (y < 0) return 0;
+  lli v = 1;
+  while (y--) v *= x;
+  return v;
+}
 
 int main(int argc, char** argv) {
   if (argc < 2) {
@@ -212,6 +218,8 @@ int main(int argc, char** argv) {
       binop(and);
     } else if (code[index] == '|') {
       binop(or);
+    } else if (code[index] == '\'') {
+      binop(expt);
     } else if (code[index] == '~') {
       pointer->value = ~pointer->value;
     } else if (code[index] == '!') {
@@ -294,38 +302,19 @@ int main(int argc, char** argv) {
       } else {
         create(left);
         create(right);
-        int t = pointer->value;
+        lli t = pointer->value;
         pointer->value = pointer->left->value;
         pointer->left->value = pointer->right->value;
         pointer->right->value = t;
         pointer = pointer->right;
       }
     } else if (code[index] == '{') {
-      create_parent(left);
-      create(right);
-      lli temp = pointer->parent->value;
-      pointer->parent->value = pointer->right->value;
-      pointer->right->value = temp;
+      pointer->value--;
     } else if (code[index] == '}') {
-      create_parent(right);
-      create(left);
-      lli temp = pointer->parent->value;
-      pointer->parent->value = pointer->left->value;
-      pointer->left->value = temp;
+      pointer->value++;
     } else if (code[index] == '\"') {
-      struct Node* collector = make_node(pointer, 0);
-      collector->left = pointer->left;
-      collector->right = pointer->right;
-      pointer->left = NULL;
-      pointer->right = collector;
-      savepreg collector;
-    } else if (code[index] == '\'') {
-      struct Node* collector = make_node(pointer, 0);
-      collector->left = pointer->left;
-      collector->right = pointer->right;
-      pointer->right = NULL;
-      pointer->left = collector;
-      savepreg collector;
+      create_parent(left);
+      pointer->parent->value = pointer->value;
     } else if (code[index] == '`') {
       prettyprint(pointer);
     }
