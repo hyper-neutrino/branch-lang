@@ -168,7 +168,12 @@ int main(int argc, char** argv) {
   while (pointer->parent != NULL) pointer = pointer->parent;
   while (code[index]) {
     if (code[index] >= '0' && code[index] <= '9') {
-      pointer->value = code[index] - '0';
+      lli num = code[index] - '0';
+      while (code[++index] >= '0' && code[index] <= '9') {
+        num = num * 10 + code[index] - '0';
+      }
+      index--;
+      pointer->value = num;
     } else if (code[index] == '.') {
       printf("%c", (char) pointer->value);
     } else if (code[index] == '#') {
