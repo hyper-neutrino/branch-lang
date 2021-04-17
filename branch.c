@@ -4,9 +4,12 @@ gcc branch.c -o branch && ./branch <code> [argument 1] [argument 2] ...
 
 */
 
+#include "limits.h"
+#include "signal.h"
+#include "stdbool.h"
 #include "stdio.h"
 #include "stdlib.h"
-#include "stdbool.h"
+#include "string.h"
 
 #define savepreg if (regindex < 13) pregisters[regindex++] =
 #define create(side)                       \
@@ -32,6 +35,8 @@ gcc branch.c -o branch && ./branch <code> [argument 1] [argument 2] ...
   pointer->value = fn(pointer->left->value, pointer->right->value);
 #define lli long long int
 
+int mmax = INT_MAX;
+
 struct Node {
   struct Node* parent;
   struct Node* left;
@@ -46,6 +51,10 @@ lli readint() {
 }
 
 struct Node* make_node(struct Node* parent, lli value) {
+  if (mmax-- == 0) {
+    fputs("You have reached the memory limit!", stderr);
+    raise(2);
+  }
   struct Node* node = malloc(sizeof(struct Node));
   node->parent = parent;
   node->left = NULL;
@@ -54,18 +63,39 @@ struct Node* make_node(struct Node* parent, lli value) {
   return node;
 }
 
+void _free_mem(struct Node* item, struct Node* last) {
+  if (item->parent != NULL && item->parent != last) {
+    _free_mem(item->parent, item);
+  }
+  if (item->left != NULL && item->left != last) {
+    _free_mem(item->left, item);
+  }
+  if (item->right != NULL && item->right != last) {
+    _free_mem(item->right, item);
+  }
+  free(item);
+}
+
+void free_mem(struct Node* item) {
+  _free_mem(item, item);
+}
+
 void _prettyprint(struct Node* root, struct Node* node, int indent) {
   if (root == NULL) {
     for (int i = 0; i < indent; i++) printf("|-- ");
     puts("(null)");
     return;
   }
-  if (root->left != NULL || root->right != NULL) _prettyprint(root->left, node, indent + 1);
+  if (root->left != NULL || root->right != NULL) {
+    _prettyprint(root->left, node, indent + 1);
+  }
   for (int i = 0; i < indent; i++) printf("|-- ");
   printf("%lld (%p)", root->value, root);
   if (root == node) printf(" *");
   puts("");
-  if (root->left != NULL || root->right != NULL) _prettyprint(root->right, node, indent + 1);
+  if (root->left != NULL || root->right != NULL) {
+    _prettyprint(root->right, node, indent + 1);
+  }
 }
 
 void prettyprint(struct Node* node) {
@@ -111,13 +141,24 @@ lli expt(lli x, lli y) {
 }
 
 int main(int argc, char** argv) {
-  if (argc < 2) {
-    puts("You have not entered any code! The code "
-      "should go in the first command line argument.");
-    return -1;
+  int codi = 1;
+  if (argc >= 2 && strcmp(argv[1], "-m") == 0) {
+    if (argc >= 3) {
+      mmax = atoi(argv[2]);
+      codi = 3;
+    } else {
+      fputs("You have entered the memory flag without an argument!", stderr);
+      raise(2);
+    }
+  }
+  if (argc <= codi) {
+    fputs("You have not entered any code! The code "
+      "should go in the a command line argument.", stderr);
+    raise(2);
   }
 
-  char* code = argv[1];
+  char* code = argv[codi];
+
   int count = 0;
   int bal = 0;
   int index = 0;
@@ -128,15 +169,15 @@ int main(int argc, char** argv) {
     } else if (code[index] == ']') {
       bal--;
       if (bal < 0) {
-        puts("Your brackets are not balanced (missing open bracket)!");
-        return -1;
+        fputs("Your brackets are not balanced (missing open bracket)!", stderr);
+        raise(2);
       }
     }
     index++;
   }
   if (bal > 0) {
-    puts("Your brackets are not balanced (missing close bracket)!");
-    return -1;
+    fputs("Your brackets are not balanced (missing close bracket)!", stderr);
+    raise(2);
   }
   int len = index - 1;
   int otc[len];
@@ -159,16 +200,16 @@ int main(int argc, char** argv) {
   struct Node* pregisters[13] = { NULL };
   int regindex = 1;
   struct Node* pointer = make_node(NULL, 0);
-  if (argc >= 3) {
-    vregisters[0] = pointer->value = atoi(argv[2]);
+  if (argc >= codi + 2) {
+    vregisters[0] = pointer->value = atoi(argv[codi + 1]);
     sregisters[0] = true;
   }
   pregisters[0] = pointer;
-  for (int argi = 3; argi < argc; argi++) {
+  for (int argi = codi + 2; argi < argc; argi++) {
     pointer = pointer->left = make_node(pointer, atoi(argv[argi]));
-    if (argi < 15) {
-      vregisters[argi - 2] = pointer->value;
-      sregisters[argi - 2] = true;
+    if (argi < codi + 14) {
+      vregisters[argi - 1 - codi] = pointer->value;
+      sregisters[argi - 1 - codi] = true;
     }
   }
   while (pointer->parent != NULL) pointer = pointer->parent;
@@ -320,4 +361,5 @@ int main(int argc, char** argv) {
     }
     index++;
   }
+  free_mem(pointer);
 }
