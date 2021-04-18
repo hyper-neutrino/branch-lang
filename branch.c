@@ -139,6 +139,11 @@ lli expt(lli x, lli y) {
   return v;
 }
 
+struct StackNode {
+  int value;
+  struct StackNode* next;
+};
+
 int main(int argc, char** argv) {
   int codi = 1;
   if (argc >= 2 && strcmp(argv[1], "-m") == 0) {
@@ -179,7 +184,7 @@ int main(int argc, char** argv) {
     fputs("Your brackets are not balanced (missing close bracket)!", stderr);
     return 0;
   }
-  int len = index - 1;
+  int len = index;
   int otc[len];
   int cto[len];
   int stack[count];
@@ -215,6 +220,7 @@ int main(int argc, char** argv) {
     }
   }
   while (pointer->parent != NULL) pointer = pointer->parent;
+  struct StackNode* ipstack = NULL;
   while (code[index]) {
     if (code[index] >= '0' && code[index] <= '9') {
       lli num = code[index] - '0';
@@ -295,11 +301,17 @@ int main(int argc, char** argv) {
     } else if (code[index] == '_') {
       pointer->value = -pointer->value;
     } else if (code[index] == '@') {
-      create(left);
-      create(right);
-      lli temp = pointer->left->value;
-      pointer->left->value = pointer->right->value;
-      pointer->right->value = temp;
+      struct StackNode* csn = malloc(sizeof(struct StackNode));
+      csn->value = index;
+      csn->next = ipstack;
+      ipstack = csn;
+      while (index > 0 && code[index] != '\n') {
+        index--;
+      }
+      if (index != 0) {
+        index++;
+      }
+      continue;
     } else if (code[index] == '?') {
       if (pointer->value == 0) {
         create(left);
@@ -386,11 +398,18 @@ int main(int argc, char** argv) {
     } else if (code[index] == '`') {
       prettyprint(pointer);
     } else if (code[index] == '\n') {
-      free_mem(pointer);
-      make_node(pointer, NULL, 0);
-      pregisters[0] = pointer;
-      for (int i = 1; i < 13; i++) pregisters[i] = NULL;
-      regindex = 1;
+      if (ipstack == NULL) {
+        free_mem(pointer);
+        make_node(pointer, NULL, 0);
+        pregisters[0] = pointer;
+        for (int i = 1; i < 13; i++) pregisters[i] = NULL;
+        regindex = 1;
+      } else {
+        struct StackNode* temp = ipstack->next;
+        index = ipstack->value;
+        free(ipstack);
+        ipstack = temp;
+      }
     }
     index++;
   }
