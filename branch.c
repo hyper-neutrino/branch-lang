@@ -89,7 +89,7 @@ void _prettyprint(struct Node* root, struct Node* node, int indent) {
     _prettyprint(root->left, node, indent + 1);
   }
   for (int i = 0; i < indent; i++) printf("|-- ");
-  printf("%lld (%p)", root->value, root);
+  printf("%lld", root->value);
   if (root == node) printf(" *");
   puts("");
   if (root->left != NULL || root->right != NULL) {
@@ -295,7 +295,12 @@ int main(int argc, char** argv) {
     } else if (code[index] == '\'') {
       binop(expt);
     } else if (code[index] == '~') {
-      pointer->value = ~pointer->value;
+      if (ipstack != NULL) {
+        struct StackNode* temp = ipstack->next;
+        index = ipstack->value;
+        free(ipstack);
+        ipstack = temp;
+      }
     } else if (code[index] == '!') {
       pointer->value = pointer->value == 0 ? 1 : 0;
     } else if (code[index] == '_') {
@@ -305,12 +310,7 @@ int main(int argc, char** argv) {
       csn->value = index;
       csn->next = ipstack;
       ipstack = csn;
-      while (index > 0 && code[index] != '\n') {
-        index--;
-      }
-      if (index != 0) {
-        index++;
-      }
+      index = 0;
       continue;
     } else if (code[index] == '?') {
       if (pointer->value == 0) {
@@ -398,18 +398,11 @@ int main(int argc, char** argv) {
     } else if (code[index] == '`') {
       prettyprint(pointer);
     } else if (code[index] == '\n') {
-      if (ipstack == NULL) {
-        free_mem(pointer);
-        make_node(pointer, NULL, 0);
-        pregisters[0] = pointer;
-        for (int i = 1; i < 13; i++) pregisters[i] = NULL;
-        regindex = 1;
-      } else {
-        struct StackNode* temp = ipstack->next;
-        index = ipstack->value;
-        free(ipstack);
-        ipstack = temp;
-      }
+      free_mem(pointer);
+      make_node(pointer, NULL, 0);
+      pregisters[0] = pointer;
+      for (int i = 1; i < 13; i++) pregisters[i] = NULL;
+      regindex = 1;
     }
     index++;
   }
