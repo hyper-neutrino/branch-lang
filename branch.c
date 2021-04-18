@@ -11,10 +11,20 @@ gcc branch.c -o branch && ./branch <code> [argument 1] [argument 2] ...
 #include "stdlib.h"
 #include "string.h"
 
+#define make_node(pos, parnode, init)                    \
+  if (mmax-- == 0) {                                     \
+    fputs("You have reached the memory limit!", stderr); \
+    return 0;                                           \
+  }                                                      \
+  pos = malloc(sizeof(struct Node));                     \
+  pos->parent = parnode;                                 \
+  pos->left = NULL;                                      \
+  pos->right = NULL;                                     \
+  pos->value = init;
 #define savepreg if (regindex < 13) pregisters[regindex++] =
 #define create(side)                       \
   if (pointer->side == NULL) {             \
-    pointer->side = make_node(pointer, 0); \
+    make_node(pointer->side, pointer, 0); \
     savepreg pointer->side;                \
   }
 #define create_parent(side)          \
@@ -25,17 +35,18 @@ gcc branch.c -o branch && ./branch <code> [argument 1] [argument 2] ...
   }
 #define binop(fn)                                   \
   if (pointer->left == NULL) {                      \
-    pointer->left = make_node(pointer, readint());  \
+    make_node(pointer->left, pointer, readint());  \
     savepreg pointer->left;                         \
   }                                                 \
   if (pointer->right == NULL) {                     \
-    pointer->right = make_node(pointer, readint()); \
+    make_node(pointer->right, pointer, readint()); \
     savepreg pointer->right;                        \
   }                                                 \
   pointer->value = fn(pointer->left->value, pointer->right->value);
 #define lli long long int
 
 int mmax = INT_MAX;
+int outlim = INT_MAX;
 
 struct Node {
   struct Node* parent;
@@ -46,21 +57,9 @@ struct Node {
 
 lli readint() {
   lli x;
+  if (feof(stdin)) return 0;
   scanf("%lld", &x);
   return x;
-}
-
-struct Node* make_node(struct Node* parent, lli value) {
-  if (mmax-- == 0) {
-    fputs("You have reached the memory limit!", stderr);
-    raise(2);
-  }
-  struct Node* node = malloc(sizeof(struct Node));
-  node->parent = parent;
-  node->left = NULL;
-  node->right = NULL;
-  node->value = value;
-  return node;
 }
 
 void _free_mem(struct Node* item, struct Node* last) {
@@ -143,18 +142,19 @@ lli expt(lli x, lli y) {
 int main(int argc, char** argv) {
   int codi = 1;
   if (argc >= 2 && strcmp(argv[1], "-m") == 0) {
-    if (argc >= 3) {
+    if (argc >= 4) {
       mmax = atoi(argv[2]);
-      codi = 3;
+      outlim = atoi(argv[3]);
+      codi = 4;
     } else {
-      fputs("You have entered the memory flag without an argument!", stderr);
-      raise(2);
+      fputs("You have entered the memory flag without enough arguments!", stderr);
+      return 0;
     }
   }
   if (argc <= codi) {
     fputs("You have not entered any code! The code "
       "should go in the a command line argument.", stderr);
-    raise(2);
+    return 0;
   }
 
   char* code = argv[codi];
@@ -170,14 +170,14 @@ int main(int argc, char** argv) {
       bal--;
       if (bal < 0) {
         fputs("Your brackets are not balanced (missing open bracket)!", stderr);
-        raise(2);
+        return 0;
       }
     }
     index++;
   }
   if (bal > 0) {
     fputs("Your brackets are not balanced (missing close bracket)!", stderr);
-    raise(2);
+    return 0;
   }
   int len = index - 1;
   int otc[len];
@@ -199,14 +199,16 @@ int main(int argc, char** argv) {
   bool sregisters[13] = { false };
   struct Node* pregisters[13] = { NULL };
   int regindex = 1;
-  struct Node* pointer = make_node(NULL, 0);
+  struct Node* pointer;
+  make_node(pointer, NULL, 0);
   if (argc >= codi + 2) {
     vregisters[0] = pointer->value = atoi(argv[codi + 1]);
     sregisters[0] = true;
   }
   pregisters[0] = pointer;
   for (int argi = codi + 2; argi < argc; argi++) {
-    pointer = pointer->left = make_node(pointer, atoi(argv[argi]));
+    make_node(pointer->left, pointer, atoi(argv[argi]));
+    pointer = pointer->left;
     if (argi < codi + 14) {
       vregisters[argi - 1 - codi] = pointer->value;
       sregisters[argi - 1 - codi] = true;
@@ -223,10 +225,35 @@ int main(int argc, char** argv) {
       pointer->value = num;
     } else if (code[index] == '.') {
       printf("%c", (char) pointer->value);
+      if (--outlim <= 0) {
+        fputs("The output was too long and was truncated!\n\n", stderr);
+        return 0;
+      }
     } else if (code[index] == '#') {
       printf("%lld", pointer->value);
+      lli v = pointer->value;
+      if (v < 0) {
+        outlim--;
+        v = -v;
+      }
+      if (v == 0) {
+        outlim--;
+      } else {
+        while (v > 0) {
+          outlim--;
+          v /= 10;
+          if (v == 0) outlim--;
+        }
+      }
+      if (outlim <= 0) {
+        fputs("The output was too long and was truncated!\n\n", stderr);
+        return 0;
+      }
     } else if (code[index] == ',') {
       pointer->value = (long long int) getchar();
+      if (feof(stdin)) {
+        pointer->value = 0;
+      }
     } else if (code[index] == '$') {
       pointer->value = readint();
     } else if (code[index] == '^') {
@@ -358,6 +385,12 @@ int main(int argc, char** argv) {
       pointer->parent->value = pointer->value;
     } else if (code[index] == '`') {
       prettyprint(pointer);
+    } else if (code[index] == '\n') {
+      free_mem(pointer);
+      make_node(pointer, NULL, 0);
+      pregisters[0] = pointer;
+      for (int i = 1; i < 13; i++) pregisters[i] = NULL;
+      regindex = 1;
     }
     index++;
   }
