@@ -62,21 +62,40 @@ lli readint() {
   return x;
 }
 
-void _free_mem(struct Node* item, struct Node* last) {
-  if (item->parent != NULL && item->parent != last) {
-    _free_mem(item->parent, item);
+void free_mem(struct Node* item) {
+  if (item->left != NULL) {
+    free_mem(item->left);
   }
-  if (item->left != NULL && item->left != last) {
-    _free_mem(item->left, item);
-  }
-  if (item->right != NULL && item->right != last) {
-    _free_mem(item->right, item);
+  if (item->right != NULL) {
+    free_mem(item->right);
   }
   free(item);
 }
 
-void free_mem(struct Node* item) {
-  _free_mem(item, item);
+long long int depth(struct Node* node) {
+  long long int ld = 0, rd = 0;
+  if (node->left  != NULL) ld = depth(node->left );
+  if (node->right != NULL) rd = depth(node->right);
+  return (ld > rd ? ld : rd) + 1;
+}
+
+void sliceleaves(struct Node* node) {
+  if (node->left != NULL) {
+    if (node->left->left == NULL && node->left->right == NULL) {
+      free_mem(node->left);
+      node->left = NULL;
+    } else {
+      sliceleaves(node->left);
+    }
+  }
+  if (node->right != NULL) {
+    if (node->right->left == NULL && node->right->right == NULL) {
+      free_mem(node->right);
+      node->right = NULL;
+    } else {
+      sliceleaves(node->right);
+    }
+  }
 }
 
 void _prettyprint(struct Node* root, struct Node* node, int indent) {
@@ -122,6 +141,9 @@ lli mod(lli x, lli y) {
 }
 lli lt(lli x, lli y) {
   return x < y ? 1 : 0;
+}
+lli eq(lli x, lli y) {
+  return x == y ? 1 : 0;
 }
 lli gt(lli x, lli y) {
   return x > y ? 1 : 0;
@@ -286,6 +308,8 @@ int main(int argc, char** argv) {
       binop(mod);
     } else if (code[index] == '<') {
       binop(lt);
+    } else if (code[index] == '=') {
+      binop(eq);
     } else if (code[index] == '>') {
       binop(gt);
     } else if (code[index] == '&') {
@@ -310,8 +334,7 @@ int main(int argc, char** argv) {
       csn->value = index;
       csn->next = ipstack;
       ipstack = csn;
-      index = 0;
-      continue;
+      while (index >= 0 && code[index] != '\n') index--;
     } else if (code[index] == '?') {
       if (pointer->value == 0) {
         create(left);
@@ -343,51 +366,62 @@ int main(int argc, char** argv) {
         pointer->value = vregisters[code[index] - 'n'];
       }
     } else if (code[index] == '(') {
-      create_parent(right);
-      if (pointer == pointer->parent->right) {
-        struct Node* a = pointer->parent->left;
-        struct Node* b = pointer->left;
-        struct Node* c = pointer->right;
-        lli tempval = pointer->parent->value;
-        pointer->parent->value = pointer->value;
-        pointer = pointer->parent;
-        pointer->left = pointer->right;
-        pointer->left->value = tempval;
-        pointer->left->left = a;
-        pointer->left->right = b;
-        pointer->right = c;
+      if (pointer->parent) {
+        struct Node* temp = pointer->parent;
+        if (pointer->parent->left == pointer) pointer->parent->left = NULL;
+        if (pointer->parent->right == pointer) pointer->parent->right = NULL;
+        free_mem(pointer);
+        pointer = temp;
       } else {
-        create(right);
-        create(left);
-        int t = pointer->value;
-        pointer->value = pointer->right->value;
-        pointer->right->value = pointer->left->value;
-        pointer->left->value = t;
-        pointer = pointer->left;
+        free_mem(pointer);
+        make_node(pointer, NULL, 0);
       }
+//       create_parent(right);
+//       if (pointer == pointer->parent->right) {
+//         struct Node* a = pointer->parent->left;
+//         struct Node* b = pointer->left;
+//         struct Node* c = pointer->right;
+//         lli tempval = pointer->parent->value;
+//         pointer->parent->value = pointer->value;
+//         pointer = pointer->parent;
+//         pointer->left = pointer->right;
+//         pointer->left->value = tempval;
+//         pointer->left->left = a;
+//         pointer->left->right = b;
+//         pointer->right = c;
+//       } else {
+//         create(right);
+//         create(left);
+//         int t = pointer->value;
+//         pointer->value = pointer->right->value;
+//         pointer->right->value = pointer->left->value;
+//         pointer->left->value = t;
+//         pointer = pointer->left;
+//       }
     } else if (code[index] == ')') {
-      create_parent(left);
-      if (pointer == pointer->parent->left) {
-        struct Node* a = pointer->left;
-        struct Node* b = pointer->right;
-        struct Node* c = pointer->parent->right;
-        lli tempval = pointer->parent->value;
-        pointer->parent->value = pointer->value;
-        pointer = pointer->parent;
-        pointer->right = pointer->left;
-        pointer->left->value = tempval;
-        pointer->right->left = b;
-        pointer->right->right = c;
-        pointer->left = a;
-      } else {
-        create(left);
-        create(right);
-        lli t = pointer->value;
-        pointer->value = pointer->left->value;
-        pointer->left->value = pointer->right->value;
-        pointer->right->value = t;
-        pointer = pointer->right;
-      }
+      break;
+//       create_parent(left);
+//       if (pointer == pointer->parent->left) {
+//         struct Node* a = pointer->left;
+//         struct Node* b = pointer->right;
+//         struct Node* c = pointer->parent->right;
+//         lli tempval = pointer->parent->value;
+//         pointer->parent->value = pointer->value;
+//         pointer = pointer->parent;
+//         pointer->right = pointer->left;
+//         pointer->left->value = tempval;
+//         pointer->right->left = b;
+//         pointer->right->right = c;
+//         pointer->left = a;
+//       } else {
+//         create(left);
+//         create(right);
+//         lli t = pointer->value;
+//         pointer->value = pointer->left->value;
+//         pointer->left->value = pointer->right->value;
+//         pointer->right->value = t;
+//         pointer = pointer->right;
+//       }
     } else if (code[index] == '{') {
       pointer->value--;
     } else if (code[index] == '}') {
@@ -396,15 +430,17 @@ int main(int argc, char** argv) {
       create_parent(left);
       pointer->parent->value = pointer->value;
     } else if (code[index] == '`') {
-      prettyprint(pointer);
-    } else if (code[index] == '\n') {
-      free_mem(pointer);
-      make_node(pointer, NULL, 0);
-      pregisters[0] = pointer;
-      for (int i = 1; i < 13; i++) pregisters[i] = NULL;
-      regindex = 1;
+      index++;
+      if (code[index] == 'D') {
+        pointer->value = depth(pointer);
+      } else if (code[index] == 'L') {
+        sliceleaves(pointer);
+      } else if (code[index] == 'P' || code[index] == 0) {
+        prettyprint(pointer);
+      }
     }
     index++;
   }
+  while (pointer->parent) pointer = pointer->parent;
   free_mem(pointer);
 }
